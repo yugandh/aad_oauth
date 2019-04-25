@@ -1,6 +1,8 @@
 import 'package:aad_oauth/aad_oauth.dart';
 import 'package:aad_oauth/model/config.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:async';
 
 void main() => runApp(new MyApp());
 
@@ -38,6 +40,10 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   static final Config config = new Config("YOUR_TENANT_ID", "YOUR CLIENT ID", "openid profile offline_access");
   final AadOAuth oauth = AadOAuth(config);
+
+  static const userProfileBaseUrl = 'https://graph.microsoft.com/v1.0/me';
+  static const authorization = 'Authorization';
+  static const bearer = 'Bearer ';
 
   Widget build(BuildContext context) {
     // adjust window size for browser login
@@ -93,14 +99,35 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await oauth.login();
       String accessToken = await oauth.getAccessToken();
+      print(accessToken);
       showMessage("Logged in successfully, your access token: $accessToken");
     } catch (e) {
       showError(e);
     }
+
+    authenticateMyProfile();
   }
 
   void logout() async {
     await oauth.logout();
     showMessage("Logged out");
+  }
+
+  // Microsoft Graph API call to fetch user profile
+  Future<void> authenticateMyProfile() async {
+    try {
+      await oauth.login();
+      String accessToken = await oauth.getAccessToken();
+      print(accessToken);
+      var response = await http.get(userProfileBaseUrl, headers: {authorization: bearer + accessToken});
+      print(response.body);
+      if(response.statusCode == 200) {
+        print("Request success with status: ${response.statusCode}.");
+      } else {
+        print("Request failed with status: ${response.statusCode}.");
+      }
+    } catch (e) {
+      print('login error');
+    }
   }
 }
